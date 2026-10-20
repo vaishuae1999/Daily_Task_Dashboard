@@ -21,7 +21,13 @@ function table_() {
 }
 function records_(sheet) {
   if(sheet.getLastRow()<2)return [];
-  return sheet.getRange(2,1,sheet.getLastRow()-1,FIELDS.length).getValues().map((r,i)=>({row:i+2,task:Object.fromEntries(FIELDS.map((f,j)=>[f,r[j]]))}));
+  const zone=sheet.getParent().getSpreadsheetTimeZone();
+  return sheet.getRange(2,1,sheet.getLastRow()-1,FIELDS.length).getValues().map((r,i)=>({row:i+2,task:Object.fromEntries(FIELDS.map((f,j)=>{
+    const v=r[j];
+    // google.script.run cannot serialize Date objects, including nested ones.
+    if(v instanceof Date)return [f,['date','followUpDate','callingDate'].includes(f)?Utilities.formatDate(v,zone,'yyyy-MM-dd'):v.toISOString()];
+    return [f,v==null?'':v];
+  }))}));
 }
 function text_(value,max) { if(value==null)return ''; const t=String(value).trim(); if(t.length>max)throw Error('Field exceeds '+max+' characters.');return t; }
 function date_(v) { const s=text_(v,10); if(!s)return ''; if(!/^\d{4}-\d{2}-\d{2}$/.test(s))throw Error('Date must be YYYY-MM-DD.');const d=new Date(s+'T00:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==s)throw Error('Invalid calendar date.');return s; }
