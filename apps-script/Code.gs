@@ -67,3 +67,17 @@ function backup_(){const c=config_(),folderId=c.p.getProperty('BACKUP_FOLDER_ID'
 function scheduledBackup_(){lock_(()=>backup_());}
 function installWeeklyBackup(){actor_();if(!config_().p.getProperty('BACKUP_FOLDER_ID'))throw Error('Set BACKUP_FOLDER_ID first.');const existing=ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='scheduledBackup_');if(!existing.length)ScriptApp.newTrigger('scheduledBackup_').timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(23).inTimezone('Asia/Kolkata').create();return 'Weekly backup configured for Sunday, approximately 11 PM India time.';}
 function getStatus(){const email=actor_(),p=config_().p;return {email,role:'Admin',lastBackup:p.getProperty('LAST_BACKUP_AT')||null,storage:'Google Sheet',weeklyBackupInstalled:ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='scheduledBackup_')};}
+
+// Only already-trashed records can be permanently removed by an authenticated admin.
+function deletePermanently(id,version){
+  actor_();
+  if(typeof id!=='string'||!id||!Number.isInteger(version)||version<1)throw Error('Invalid record reference. Refresh and retry.');
+  return lock_(()=>{
+    const sheet=table_(),found=records_(sheet).find(x=>x.task.id===id);
+    if(!found)throw Error('Record no longer exists. Refresh the list.');
+    if(Number(found.task.version)!==version)throw Error('Conflict: record changed. Refresh before deleting.');
+    if(!found.task.deletedAt)throw Error('Move the record to Trash before permanently deleting it.');
+    sheet.deleteRow(found.row);
+    return {deleted:true,id};
+  });
+}
