@@ -1,0 +1,1 @@
+{"name":"daily-task-dashboard","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.cjs","prepare-import":"node tools/prepare-import.mjs"},"dependencies":{"exceljs":"4.4.0"},"engines":{"node":">=22"}}
